@@ -32,19 +32,23 @@ alter table public.products enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_profiles enable row level security;
 
+drop policy if exists "Products are readable by everyone" on public.products;
 create policy "Products are readable by everyone"
   on public.products for select
   using (true);
 
+drop policy if exists "Authenticated users can manage products" on public.products;
 create policy "Authenticated users can manage products"
   on public.products for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
+drop policy if exists "Site settings are readable by everyone" on public.site_settings;
 create policy "Site settings are readable by everyone"
   on public.site_settings for select
   using (true);
 
+drop policy if exists "Authenticated users can manage site settings" on public.site_settings;
 create policy "Authenticated users can manage site settings"
   on public.site_settings for all
   using (auth.role() = 'authenticated')
