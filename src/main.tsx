@@ -4,31 +4,65 @@ import { createWhatsAppLink, products } from './data/products';
 import './styles.css';
 
 const featuredProduct = products.find((product) => product.featured) ?? products[0];
-
 const perks = ['Fresh', 'Quality check', 'Makan / budidaya / koleksi'];
 
-function App() {
+const paths = {
+  home: '/',
+  catalog: '/markas-kolam/ekatalog/index.html',
+};
+
+function Navbar() {
+  return (
+    <header className="site-header">
+      <a className="brand" href={paths.home} aria-label="Markas Kolam beranda">
+        Markas Kolam
+      </a>
+      <nav className="nav-links" aria-label="Navigasi utama">
+        <a href={paths.home}>Home</a>
+        <a href={paths.catalog}>E-Katalog</a>
+        <a href="/#perks">Keunggulan</a>
+        <a href="/#contact">WA</a>
+      </nav>
+    </header>
+  );
+}
+
+const ProductCard: React.FC<{ product: (typeof products)[number] }> = ({ product }) => {
+  return (
+    <article className="product-card">
+      <span>{product.category}</span>
+      <h3>{product.name}</h3>
+      <p>{product.description}</p>
+      <div className="product-use-cases">
+        {product.useCases.map((useCase) => (
+          <span key={useCase}>{useCase}</span>
+        ))}
+      </div>
+      <strong>{product.price}</strong>
+      <a
+        className="button button-primary"
+        href={createWhatsAppLink(product.whatsappMessage)}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Pesan via WA
+      </a>
+    </article>
+  );
+};
+
+function HomePage() {
   return (
     <>
-      <header className="site-header">
-        <a className="brand" href="#hero" aria-label="Markas Kolam beranda">
-          Markas Kolam
-        </a>
-        <nav className="nav-links" aria-label="Navigasi utama">
-          <a href="#catalog">Katalog</a>
-          <a href="#perks">Keunggulan</a>
-          <a href="#contact">WA</a>
-        </nav>
-      </header>
-
+      <Navbar />
       <main>
         <section className="hero" id="hero">
           <div className="hero-content">
             <p className="eyebrow">Fresh fish drop</p>
             <h1>Ikan fresh buat makan, ternak, atau koleksi.</h1>
             <div className="hero-actions">
-              <a className="button button-primary" href="#catalog">
-                Lihat Katalog
+              <a className="button button-primary" href={paths.catalog}>
+                Buka E-Katalog
               </a>
               <a
                 className="button button-secondary"
@@ -69,36 +103,6 @@ function App() {
           </div>
         </section>
 
-        <section className="section catalog" id="catalog" aria-labelledby="catalog-title">
-          <div className="section-heading compact-heading">
-            <p className="section-label">E-Catalog</p>
-            <h2 id="catalog-title">Ready list</h2>
-          </div>
-          <div className="product-grid">
-            {products.map((product) => (
-              <article className="product-card" key={product.id}>
-                <span>{product.category}</span>
-                <h3>{product.name}</h3>
-                <p>{product.description}</p>
-                <div className="product-use-cases">
-                  {product.useCases.map((useCase) => (
-                    <span key={useCase}>{useCase}</span>
-                  ))}
-                </div>
-                <strong>{product.price}</strong>
-                <a
-                  className="button button-primary"
-                  href={createWhatsAppLink(product.whatsappMessage)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Pesan via WA
-                </a>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="section contact" id="contact">
           <p className="section-label">Order</p>
           <h2>Mau stok hari ini?</h2>
@@ -116,6 +120,34 @@ function App() {
       </main>
     </>
   );
+}
+
+function CatalogPage() {
+  return (
+    <>
+      <Navbar />
+      <main>
+        <section className="section catalog-page" aria-labelledby="catalog-title">
+          <div className="section-heading compact-heading">
+            <p className="section-label">E-Katalog</p>
+            <h1 id="catalog-title">Ready list</h1>
+            <p className="catalog-note">Pilih ikan, klik WA, selesai.</p>
+          </div>
+          <div className="product-grid">
+            {products.map((product) => (
+              <ProductCard product={product} key={product.id} />
+            ))}
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+
+function App() {
+  const isCatalogPage = window.location.pathname.startsWith(paths.catalog);
+
+  return isCatalogPage ? <CatalogPage /> : <HomePage />;
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
