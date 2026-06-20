@@ -20,22 +20,35 @@ create table if not exists public.site_settings (
   updated_at timestamptz default now()
 );
 
+create table if not exists public.admin_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  username text unique not null,
+  role text not null default 'admin',
+  created_at timestamptz default now()
+);
+
 alter table public.products enable row level security;
 alter table public.site_settings enable row level security;
+alter table public.admin_profiles enable row level security;
 
+drop policy if exists "Products are readable by everyone" on public.products;
 create policy "Products are readable by everyone"
   on public.products for select
   using (true);
 
+drop policy if exists "Authenticated users can manage products" on public.products;
 create policy "Authenticated users can manage products"
   on public.products for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
+drop policy if exists "Site settings are readable by everyone" on public.site_settings;
 create policy "Site settings are readable by everyone"
   on public.site_settings for select
   using (true);
 
+drop policy if exists "Authenticated users can manage site settings" on public.site_settings;
 create policy "Authenticated users can manage site settings"
   on public.site_settings for all
   using (auth.role() = 'authenticated')
@@ -58,9 +71,18 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin'
-    or coalesce((auth.jwt() -> 'app_metadata' ->> 'admin')::boolean, false);
+  select exists (
+    select 1
+    from public.admin_profiles
+    where user_id = auth.uid()
+      and role = 'admin'
+  );
 $$;
+
+drop policy if exists "Admins can read admin profiles" on public.admin_profiles;
+create policy "Admins can read admin profiles"
+  on public.admin_profiles for select
+  using (public.is_admin());
 
 drop policy if exists "Admins can read audit logs" on public.admin_audit_logs;
 create policy "Admins can read audit logs"
