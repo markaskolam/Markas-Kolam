@@ -674,7 +674,7 @@ function AdminDashboard({
   const menuItems: { id: AdminSection; label: string }[] = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'catalog', label: 'E-Katalog' },
-    { id: 'settings', label: 'Pengaturan Website' },
+    { id: 'settings', label: 'Pengaturan Web' },
     { id: 'sql', label: 'SQL Editor' },
   ];
 
@@ -701,11 +701,11 @@ function AdminDashboard({
           </nav>
         </aside>
 
-        <div className="admin-content">
+        <div className="admin-main">
           <section className="admin-header">
             <div>
               <p className="section-label">Dashboard</p>
-              <h1>Admin Markas Kolam</h1>
+              <h1>Admin Panel Markas Kolam</h1>
               <p>Edit konten landing page dan kelola produk e-katalog dari Supabase.</p>
             </div>
             <button className="button button-secondary" type="button" onClick={onLogout}>Logout</button>
@@ -720,16 +720,16 @@ function AdminDashboard({
               <p className="section-label">Ringkasan</p>
               <h2>Dashboard</h2>
               <div className="admin-stats">
-                <article><strong>{products.length}</strong><span>Total produk</span></article>
-                <article><strong>{featuredCount}</strong><span>Produk unggulan</span></article>
-                <article><strong>{siteContent.whatsappNumber}</strong><span>Nomor WhatsApp</span></article>
+                <article className="admin-card"><strong>{products.length}</strong><span>Total produk</span></article>
+                <article className="admin-card"><strong>{featuredCount}</strong><span>Produk unggulan</span></article>
+                <article className="admin-card"><strong>{isSupabaseConfigured ? 'Aktif' : 'Belum aktif'}</strong><span>Status koneksi Supabase</span></article>
               </div>
             </section>
           )}
 
           {activeSection === 'settings' && (
             <section className="admin-panel">
-              <h2>Pengaturan Website</h2>
+              <h2>Pengaturan Web</h2>
               <form className="admin-form" onSubmit={onSaveSettings}>
                 <label>Headline<textarea value={siteContent.headline} onChange={(event) => setSiteContent({ ...siteContent, headline: event.target.value })} required /></label>
                 <label>Subheadline<textarea value={siteContent.subheadline} onChange={(event) => setSiteContent({ ...siteContent, subheadline: event.target.value })} required /></label>
@@ -766,24 +766,48 @@ function AdminDashboard({
 
               <section className="admin-panel product-manager">
                 <h2>Produk E-Katalog</h2>
-                <div className="admin-product-list">
-                  {products.map((product) => (
-                    <article className="admin-product-item" key={product.id}>
-                      {product.imageUrl && <img src={product.imageUrl} alt="" />}
-                      <div>
-                        <span>{product.category}{product.featured ? ' • Unggulan' : ''}</span>
-                        <strong>{product.name}</strong>
-                        <p>{product.description}</p>
-                      </div>
-                      <div className="admin-actions">
-                        <button className="button button-secondary" type="button" onClick={() => setForm(toProductForm(product))}>Edit</button>
-                        <button className="button button-secondary" type="button" onClick={() => onToggleFeatured(product)}>{product.featured ? 'Batalkan Unggulan' : 'Tandai Unggulan'}</button>
-                        <button className="button danger-button" type="button" onClick={() => onDeleteProduct(product)}>Hapus</button>
-                      </div>
-                    </article>
-                  ))}
-                  {products.length === 0 && <p>Belum ada produk.</p>}
-                </div>
+                {products.length === 0 ? (
+                  <p>Belum ada produk.</p>
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Produk</th>
+                          <th>Kategori</th>
+                          <th>Harga</th>
+                          <th>Status</th>
+                          <th>Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((product) => (
+                          <tr key={product.id}>
+                            <td>
+                              <div className="admin-product-cell">
+                                {product.imageUrl && <img src={product.imageUrl} alt="" />}
+                                <div>
+                                  <strong>{product.name}</strong>
+                                  <p>{product.description}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td>{product.category}</td>
+                            <td>{product.price}</td>
+                            <td>{product.featured ? 'Unggulan' : 'Reguler'}</td>
+                            <td>
+                              <div className="admin-actions">
+                                <button className="button button-secondary" type="button" onClick={() => setForm(toProductForm(product))}>Edit</button>
+                                <button className="button button-secondary" type="button" onClick={() => onToggleFeatured(product)}>{product.featured ? 'Batalkan Unggulan' : 'Tandai Unggulan'}</button>
+                                <button className="button danger-button" type="button" onClick={() => onDeleteProduct(product)}>Hapus</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
             </>
           )}
@@ -804,8 +828,7 @@ function App() {
     return () => window.removeEventListener('popstate', handleRouteChange);
   }, []);
 
-  if (pathname === paths.admin) return <AdminLoginPage />;
-  if (pathname === paths.adminDashboard) return <AdminPage />;
+  if (pathname === paths.admin || pathname === paths.adminDashboard) return <AdminPage />;
   if (pathname.startsWith(paths.catalog)) return <CatalogPage />;
   return <HomePage />;
 }
