@@ -40,6 +40,30 @@ Data Supabase diisi di file `.env.local` pada root repository. File ini sengaja 
 
 Aplikasi akan memakai `VITE_SUPABASE_PUBLISHABLE_KEY` sebagai key utama. Jika belum tersedia, aplikasi fallback ke `VITE_SUPABASE_ANON_KEY`.
 
+
+## Setup akun admin
+
+Akun admin harus dibuat dari Supabase Dashboard atau proses server-side yang memakai service role key, bukan dari frontend publik.
+
+1. Buka **Authentication > Users** di Supabase Dashboard.
+2. Buat user baru dengan email `admin@markaskolam.local` dan password awal sesuai kebutuhan.
+3. Rotasi password setelah deployment jika password pernah dibagikan lewat chat atau media lain.
+4. Jalankan `supabase/schema.sql` agar tabel `admin_profiles` tersedia.
+5. Tambahkan profile admin untuk user tersebut lewat SQL Editor Supabase:
+
+   ```sql
+   insert into public.admin_profiles (user_id, username, role)
+   select id, 'admin', 'admin'
+   from auth.users
+   where email = 'admin@markaskolam.local'
+   on conflict (username) do update
+     set user_id = excluded.user_id,
+         role = excluded.role;
+   ```
+
+6. Login aplikasi memakai username `admin`; frontend hanya memetakan username tersebut ke email Supabase Auth dan tetap memakai `signInWithPassword`.
+7. Jangan simpan password admin di source code, `.env`, `localStorage`, atau database custom.
+
 ## Struktur halaman
 
 Halaman utama ada di `index.html`. E-Katalog dibuat sebagai halaman terpisah di `ekatalog/index.html`, sehingga bisa diakses lewat path `/ekatalog/`.
