@@ -19,6 +19,27 @@ Aplikasi web awal untuk bisnis **Markas Kolam**, penjual ikan konsumsi segar. Pr
 3. Buka URL lokal yang ditampilkan oleh Vite, biasanya `http://localhost:5173`.
 
 
+
+## Konfigurasi Supabase
+
+Data Supabase diisi di file `.env.local` pada root repository. File ini sengaja masuk `.gitignore`, jadi aman untuk kredensial lokal dan tidak akan ikut ter-commit.
+
+1. Salin template env:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. Isi `.env.local` dengan nilai dari dashboard Supabase:
+
+   ```env
+   VITE_SUPABASE_URL="https://your-project-ref.supabase.co"
+   VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+   VITE_SUPABASE_PUBLISHABLE_KEY="your-supabase-publishable-key"
+   ```
+
+Aplikasi akan memakai `VITE_SUPABASE_PUBLISHABLE_KEY` sebagai key utama. Jika belum tersedia, aplikasi fallback ke `VITE_SUPABASE_ANON_KEY`.
+
 ## Struktur halaman
 
 Halaman utama ada di `index.html`. E-Katalog dibuat sebagai halaman terpisah di `ekatalog/index.html`, sehingga bisa diakses lewat path `/ekatalog/`.
