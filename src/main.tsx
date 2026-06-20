@@ -22,11 +22,11 @@ function App() {
       <main>
         <section className="hero" id="hero">
           <div className="hero-content">
-            <p className="eyebrow">Ikan konsumsi segar & siap pesan</p>
-            <h1>Markas Kolam menyediakan ikan pilihan untuk meja makan terbaik Anda.</h1>
+            <p className="eyebrow">Ikan segar untuk konsumsi, budidaya & koleksi</p>
+            <h1>Markas Kolam menyediakan ikan pilihan untuk konsumsi, budidaya, dan koleksi.</h1>
             <p>
-              Dapatkan ikan konsumsi berkualitas dengan kesegaran terjaga, cocok untuk kebutuhan
-              keluarga, usaha kuliner, hingga rumah makan.
+              Dapatkan ikan berkualitas dengan kesegaran terjaga, cocok untuk kebutuhan keluarga,
+              usaha kuliner, budidaya, hingga koleksi ikan hias.
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#catalog">
@@ -46,18 +46,23 @@ function App() {
             <span>Produk Unggulan</span>
             <strong>{featuredProduct.name}</strong>
             <p>{featuredProduct.description}</p>
+            <div className="use-case-list" aria-label="Kegunaan produk unggulan">
+              {featuredProduct.useCases.map((useCase) => (
+                <span key={useCase}>{useCase}</span>
+              ))}
+            </div>
           </div>
         </section>
 
         <section className="section about" id="about">
           <div>
             <p className="section-label">Tentang Bisnis</p>
-            <h2>Penjual ikan konsumsi yang mengutamakan kesegaran.</h2>
+            <h2>Penjual ikan berkualitas untuk konsumsi, budidaya, dan koleksi.</h2>
           </div>
           <p>
-            Markas Kolam adalah penyedia ikan konsumsi untuk pelanggan rumahan dan pelaku usaha
-            kuliner. Kami membantu pelanggan mendapatkan ikan yang segar, bersih, dan siap diolah
-            menjadi berbagai menu favorit.
+            Markas Kolam adalah penyedia ikan untuk pelanggan rumahan, pelaku usaha kuliner,
+            pembudidaya, dan kolektor ikan. Kami membantu pelanggan mendapatkan ikan yang sehat,
+            segar, dan sesuai kebutuhan—baik untuk diolah, dibesarkan, maupun dijadikan koleksi.
           </p>
         </section>
 
@@ -66,6 +71,11 @@ function App() {
             <p className="section-label">Produk Unggulan</p>
             <h2 id="featured-title">{featuredProduct.name}</h2>
             <p>{featuredProduct.description}</p>
+            <div className="use-case-list" aria-label="Kegunaan produk unggulan">
+              {featuredProduct.useCases.map((useCase) => (
+                <span key={useCase}>{useCase}</span>
+              ))}
+            </div>
           </div>
           <a
             className="button button-primary"
@@ -92,8 +102,8 @@ function App() {
               <p>Produk dipilih untuk menjaga mutu, rasa, dan kepuasan pelanggan.</p>
             </article>
             <article>
-              <h3>Cocok untuk Konsumsi</h3>
-              <p>Ideal untuk menu keluarga, katering, warung makan, hingga rumah makan.</p>
+              <h3>Multiguna</h3>
+              <p>Ideal untuk konsumsi, kebutuhan rumah makan, budidaya, ikan hias, hingga koleksi.</p>
             </article>
           </div>
         </section>
@@ -102,7 +112,10 @@ function App() {
           <div className="section-heading">
             <p className="section-label">E-Catalog</p>
             <h2 id="catalog-title">Katalog produk Markas Kolam</h2>
-            <p>Pilih produk dan hubungi kami melalui WhatsApp untuk informasi stok dan harga.</p>
+            <p>
+              Pilih produk dan hubungi kami melalui WhatsApp untuk informasi stok, ukuran,
+              fungsi produk, dan harga.
+            </p>
           </div>
           <div className="product-grid">
             {products.map((product) => (
@@ -110,6 +123,11 @@ function App() {
                 <span>{product.category}</span>
                 <h3>{product.name}</h3>
                 <p>{product.description}</p>
+                <div className="product-use-cases">
+                  {product.useCases.map((useCase) => (
+                    <span key={useCase}>{useCase}</span>
+                  ))}
+                </div>
                 <strong>{product.price}</strong>
                 <a
                   className="button button-primary"
@@ -127,10 +145,15 @@ function App() {
         <section className="section contact" id="contact">
           <p className="section-label">Kontak</p>
           <h2>Siap pesan ikan segar hari ini?</h2>
-          <p>Hubungi Markas Kolam melalui WhatsApp untuk pemesanan, stok, dan harga terbaru.</p>
+          <p>
+            Hubungi Markas Kolam melalui WhatsApp untuk pemesanan, pilihan ukuran, stok, dan
+            harga terbaru.
+          </p>
           <a
             className="button button-light"
-            href={createWhatsAppLink('Halo Markas Kolam, saya ingin pesan ikan konsumsi.')}
+            href={createWhatsAppLink(
+              'Halo Markas Kolam, saya ingin tanya ikan untuk konsumsi, budidaya, atau koleksi.',
+            )}
             target="_blank"
             rel="noreferrer"
           >

@@ -5,6 +5,7 @@ export type Product = {
   description: string;
   price: string;
   whatsappMessage: string;
+  useCases: string[];
   featured?: boolean;
 };
 
@@ -14,9 +15,11 @@ export const products: Product[] = [
     name: 'Gurame Padang',
     category: 'Ikan',
     description:
-      'Ikan gurame konsumsi pilihan dengan daging tebal, rasa lezat, dan kualitas yang cocok untuk hidangan keluarga maupun kebutuhan rumah makan.',
+      'Gurame Padang pilihan yang cocok untuk konsumsi, pembesaran budidaya, serta ikan hias atau koleksi karena karakter tubuhnya yang menarik dan mudah dipantau.',
+    useCases: ['Konsumsi keluarga', 'Budidaya/pembesaran', 'Ikan hias & koleksi'],
     price: 'Hubungi kami untuk harga terbaru',
-    whatsappMessage: 'Halo Markas Kolam, saya ingin pesan Gurame Padang.',
+    whatsappMessage:
+      'Halo Markas Kolam, saya ingin tanya/pesan Gurame Padang untuk konsumsi, budidaya, atau koleksi.',
     featured: true,
   },
 ];

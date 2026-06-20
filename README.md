@@ -36,11 +36,14 @@ Data produk disimpan di `src/data/products.ts`. Untuk menambah produk baru, tamb
   description: 'Deskripsi singkat produk.',
   price: 'Hubungi kami untuk harga terbaru',
   whatsappMessage: 'Halo Markas Kolam, saya ingin pesan Nama Produk.',
+  useCases: ['Konsumsi', 'Budidaya', 'Ikan hias & koleksi'],
   featured: false,
 }
 ```
 
 Jika ingin menjadikan produk sebagai produk unggulan di halaman utama, set `featured: true` pada produk tersebut.
+
+Gunakan `useCases` untuk menampilkan kegunaan produk di kartu katalog, misalnya untuk konsumsi, budidaya/pembesaran, atau ikan hias/koleksi.
 
 ## Nomor WhatsApp
 
