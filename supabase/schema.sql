@@ -6,10 +6,12 @@ create table if not exists public.products (
   category text not null,
   description text,
   price text,
+  image_url text,
   use_cases text[],
   whatsapp_message text,
   featured boolean default false,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 create table if not exists public.site_settings (
@@ -130,3 +132,26 @@ $$;
 revoke all on function public.admin_execute_readonly_sql(text) from public, anon, authenticated;
 
 grant execute on function public.admin_execute_readonly_sql(text) to service_role;
+
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_products_updated_at on public.products;
+create trigger set_products_updated_at
+  before update on public.products
+  for each row
+  execute function public.set_updated_at();
+
+drop trigger if exists set_site_settings_updated_at on public.site_settings;
+create trigger set_site_settings_updated_at
+  before update on public.site_settings
+  for each row
+  execute function public.set_updated_at();
