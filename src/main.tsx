@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createWhatsAppLink, mapProductRow, type Product, type ProductRow } from './data/products';
-import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 import './styles.css';
 
-type Session = { access_token: string; user: { email?: string } };
+type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
 type SiteContent = {
   headline: string;
@@ -87,7 +87,7 @@ const toProductForm = (product: Product): ProductFormState => ({
 });
 
 async function fetchProducts() {
-  if (!isSupabaseConfigured) return [];
+  if (!isSupabaseConfigured) throw new Error('Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY.');
 
   const { data, error } = (await supabase
     .from('products')
