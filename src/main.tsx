@@ -5,6 +5,8 @@ import './styles.css';
 
 const featuredProduct = products.find((product) => product.featured) ?? products[0];
 
+const perks = ['Fresh', 'Quality check', 'Makan / budidaya / koleksi'];
+
 function App() {
   return (
     <>
@@ -13,37 +15,34 @@ function App() {
           Markas Kolam
         </a>
         <nav className="nav-links" aria-label="Navigasi utama">
-          <a href="#about">Tentang</a>
-          <a href="#catalog">E-Catalog</a>
-          <a href="#contact">Kontak</a>
+          <a href="#catalog">Katalog</a>
+          <a href="#perks">Keunggulan</a>
+          <a href="#contact">WA</a>
         </nav>
       </header>
 
       <main>
         <section className="hero" id="hero">
           <div className="hero-content">
-            <p className="eyebrow">Ikan segar untuk konsumsi, budidaya & koleksi</p>
-            <h1>Markas Kolam menyediakan ikan pilihan untuk konsumsi, budidaya, dan koleksi.</h1>
-            <p>
-              Dapatkan ikan berkualitas dengan kesegaran terjaga, cocok untuk kebutuhan keluarga,
-              usaha kuliner, budidaya, hingga koleksi ikan hias.
-            </p>
+            <p className="eyebrow">Fresh fish drop</p>
+            <h1>Ikan fresh buat makan, ternak, atau koleksi.</h1>
             <div className="hero-actions">
               <a className="button button-primary" href="#catalog">
                 Lihat Katalog
               </a>
               <a
                 className="button button-secondary"
-                href={createWhatsAppLink('Halo Markas Kolam, saya ingin tanya katalog ikan.')}
+                href={createWhatsAppLink('Halo Markas Kolam, saya mau tanya stok ikan hari ini.')}
                 target="_blank"
                 rel="noreferrer"
               >
-                Chat WhatsApp
+                Chat WA
               </a>
             </div>
           </div>
-          <div className="hero-card" aria-label="Produk unggulan Markas Kolam">
-            <span>Produk Unggulan</span>
+
+          <article className="hero-card" aria-label="Produk unggulan Markas Kolam">
+            <span>Featured</span>
             <strong>{featuredProduct.name}</strong>
             <p>{featuredProduct.description}</p>
             <div className="use-case-list" aria-label="Kegunaan produk unggulan">
@@ -51,71 +50,29 @@ function App() {
                 <span key={useCase}>{useCase}</span>
               ))}
             </div>
-          </div>
+          </article>
         </section>
 
-        <section className="section about" id="about">
-          <div>
-            <p className="section-label">Tentang Bisnis</p>
-            <h2>Penjual ikan berkualitas untuk konsumsi, budidaya, dan koleksi.</h2>
-          </div>
-          <p>
-            Markas Kolam adalah penyedia ikan untuk pelanggan rumahan, pelaku usaha kuliner,
-            pembudidaya, dan kolektor ikan. Kami membantu pelanggan mendapatkan ikan yang sehat,
-            segar, dan sesuai kebutuhan—baik untuk diolah, dibesarkan, maupun dijadikan koleksi.
-          </p>
+        <section className="section intro" aria-label="Tentang Markas Kolam">
+          <p>Markas Kolam jual ikan sehat untuk dapur, kolam budidaya, dan koleksi.</p>
         </section>
 
-        <section className="section featured" aria-labelledby="featured-title">
-          <div className="section-heading">
-            <p className="section-label">Produk Unggulan</p>
-            <h2 id="featured-title">{featuredProduct.name}</h2>
-            <p>{featuredProduct.description}</p>
-            <div className="use-case-list" aria-label="Kegunaan produk unggulan">
-              {featuredProduct.useCases.map((useCase) => (
-                <span key={useCase}>{useCase}</span>
-              ))}
-            </div>
+        <section className="section perks" id="perks" aria-labelledby="perks-title">
+          <div className="section-heading compact-heading">
+            <p className="section-label">Why us</p>
+            <h2 id="perks-title">Singkat aja: ikan bagus, proses gampang.</h2>
           </div>
-          <a
-            className="button button-primary"
-            href={createWhatsAppLink(featuredProduct.whatsappMessage)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Pesan Produk Unggulan
-          </a>
-        </section>
-
-        <section className="section advantages" aria-labelledby="advantages-title">
-          <div className="section-heading">
-            <p className="section-label">Keunggulan</p>
-            <h2 id="advantages-title">Alasan memilih Markas Kolam</h2>
-          </div>
-          <div className="advantage-grid">
-            <article>
-              <h3>Segar</h3>
-              <p>Ikan ditangani dengan baik agar tetap segar saat sampai ke pelanggan.</p>
-            </article>
-            <article>
-              <h3>Kualitas Terjaga</h3>
-              <p>Produk dipilih untuk menjaga mutu, rasa, dan kepuasan pelanggan.</p>
-            </article>
-            <article>
-              <h3>Multiguna</h3>
-              <p>Ideal untuk konsumsi, kebutuhan rumah makan, budidaya, ikan hias, hingga koleksi.</p>
-            </article>
+          <div className="perk-strip">
+            {perks.map((perk) => (
+              <span key={perk}>{perk}</span>
+            ))}
           </div>
         </section>
 
         <section className="section catalog" id="catalog" aria-labelledby="catalog-title">
-          <div className="section-heading">
+          <div className="section-heading compact-heading">
             <p className="section-label">E-Catalog</p>
-            <h2 id="catalog-title">Katalog produk Markas Kolam</h2>
-            <p>
-              Pilih produk dan hubungi kami melalui WhatsApp untuk informasi stok, ukuran,
-              fungsi produk, dan harga.
-            </p>
+            <h2 id="catalog-title">Ready list</h2>
           </div>
           <div className="product-grid">
             {products.map((product) => (
@@ -135,7 +92,7 @@ function App() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Pesan via WhatsApp
+                  Pesan via WA
                 </a>
               </article>
             ))}
@@ -143,21 +100,17 @@ function App() {
         </section>
 
         <section className="section contact" id="contact">
-          <p className="section-label">Kontak</p>
-          <h2>Siap pesan ikan segar hari ini?</h2>
-          <p>
-            Hubungi Markas Kolam melalui WhatsApp untuk pemesanan, pilihan ukuran, stok, dan
-            harga terbaru.
-          </p>
+          <p className="section-label">Order</p>
+          <h2>Mau stok hari ini?</h2>
           <a
             className="button button-light"
             href={createWhatsAppLink(
-              'Halo Markas Kolam, saya ingin tanya ikan untuk konsumsi, budidaya, atau koleksi.',
+              'Halo Markas Kolam, saya mau tanya stok Gurame Padang hari ini.',
             )}
             target="_blank"
             rel="noreferrer"
           >
-            Hubungi WhatsApp
+            Chat WhatsApp
           </a>
         </section>
       </main>
