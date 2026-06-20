@@ -8,7 +8,7 @@ const perks = ['Fresh', 'Quality check', 'Makan / budidaya / koleksi'];
 
 const paths = {
   home: '/',
-  catalog: '/markas-kolam/ekatalog/index.html',
+  catalog: '/ekatalog/index.html',
 };
 
 function Navbar() {

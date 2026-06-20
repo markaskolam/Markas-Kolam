@@ -8,7 +8,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        ekatalog: resolve(__dirname, 'markas-kolam/ekatalog/index.html'),
+        ekatalog: resolve(__dirname, 'ekatalog/index.html'),
       },
     },
   },

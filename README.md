@@ -21,7 +21,7 @@ Aplikasi web awal untuk bisnis **Markas Kolam**, penjual ikan konsumsi segar. Pr
 
 ## Struktur halaman
 
-Halaman utama ada di `index.html`. E-Katalog dibuat sebagai halaman terpisah di `markas-kolam/ekatalog/index.html`, sehingga bisa diakses lewat path `/markas-kolam/ekatalog/`.
+Halaman utama ada di `index.html`. E-Katalog dibuat sebagai halaman terpisah di `ekatalog/index.html`, sehingga bisa diakses lewat path `/ekatalog/`.
 
 Jika nanti menambah fitur atau halaman baru, buat folder dan `index.html` sendiri mengikuti pola tersebut, lalu daftarkan entry HTML-nya di `vite.config.ts` pada `build.rollupOptions.input`.
 
