@@ -7,7 +7,9 @@ import './styles.css';
 type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
 const ADMIN_USERNAME = 'admin';
-const ADMIN_EMAIL = 'admin@markaskolam.local';
+const ADMIN_EMAIL_BY_USERNAME: Record<string, string> = {
+  [ADMIN_USERNAME]: 'admin@markaskolam.local',
+};
 
 type QueryHistoryItem = {
   query: string;
@@ -470,16 +472,18 @@ function AdminPage() {
     setLoading(true);
     setError('');
     setMessage('');
-    if (username.trim().toLowerCase() !== ADMIN_USERNAME) {
+    const mappedAdminEmail = ADMIN_EMAIL_BY_USERNAME[username.trim().toLowerCase()];
+    if (!mappedAdminEmail) {
       setLoading(false);
       setError('Username tidak dikenali. Gunakan username admin yang terdaftar.');
       return;
     }
 
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: mappedAdminEmail, password });
     setLoading(false);
     if (authError) setError('Login gagal. Periksa username dan password admin.');
     else {
+      setPassword('');
       setMessage('Login berhasil.');
       window.history.pushState(null, '', paths.adminDashboard);
       window.dispatchEvent(new PopStateEvent('popstate'));
@@ -586,14 +590,29 @@ function AdminPage() {
             </form>
             {message && <p className="admin-message success">{message}</p>}
             {error && <p className="admin-message error">{error}</p>}
-            <p className="admin-help">Konfigurasi akun: buat user Supabase Auth <strong>{ADMIN_EMAIL}</strong>, lalu tambahkan baris <strong>admin_profiles</strong> dengan username <strong>{ADMIN_USERNAME}</strong> dan role <strong>admin</strong>. Jangan simpan password admin di source code, .env, localStorage, atau database custom.</p>
+            <p className="admin-help">Konfigurasi akun: buat user Supabase Auth <strong>{ADMIN_EMAIL_BY_USERNAME[ADMIN_USERNAME]}</strong>, lalu tambahkan baris <strong>admin_profiles</strong> dengan username <strong>{ADMIN_USERNAME}</strong> dan role <strong>admin</strong>. Jangan simpan password admin di source code, .env, localStorage, atau database custom.</p>
           </section>
         </main>
       </>
     );
   }
 
-  if (adminChecked && !isAdmin) {
+  if (!adminChecked) {
+    return (
+      <>
+        <Navbar />
+        <main className="admin-page">
+          <section className="admin-panel auth-panel">
+            <p className="section-label">Admin</p>
+            <h1>Memverifikasi sesi admin</h1>
+            <p className="admin-message">Mohon tunggu, sesi Supabase Auth sedang diverifikasi sebelum dashboard ditampilkan.</p>
+          </section>
+        </main>
+      </>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <>
         <Navbar />
