@@ -82,8 +82,12 @@ const paths = {
   home: '/',
   catalog: '/ekatalog/index.html',
   admin: '/admin',
+  adminIndex: '/admin/index.html',
   adminDashboard: '/admin/dashboard',
 };
+
+const adminLoginPaths = new Set([paths.admin, `${paths.admin}/`, paths.adminIndex]);
+const isAdminLoginPath = (pathname: string) => adminLoginPaths.has(pathname);
 
 const toProductPayload = (form: ProductFormState) => ({
   name: form.name.trim(),
@@ -432,7 +436,7 @@ function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (session && window.location.pathname === paths.admin) {
+    if (session && isAdminLoginPath(window.location.pathname)) {
       window.history.replaceState(null, '', paths.adminDashboard);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
@@ -847,7 +851,7 @@ function App() {
     return () => window.removeEventListener('popstate', handleRouteChange);
   }, []);
 
-  if (pathname === paths.admin || pathname === paths.adminDashboard) return <AdminPage />;
+  if (isAdminLoginPath(pathname) || pathname === paths.adminDashboard) return <AdminPage />;
   if (pathname.startsWith(paths.catalog)) return <CatalogPage />;
   return <HomePage />;
 }
