@@ -457,7 +457,7 @@ function AdminPage() {
       setAdminChecked(true);
       if (allowed) void loadAdminData();
       else {
-        setError('Akses /admin hanya untuk user dengan app_metadata role admin.');
+        setError('Akses /admin hanya untuk user yang terdaftar di admin_profiles dengan role admin.');
         setLoading(false);
       }
     };
@@ -586,7 +586,7 @@ function AdminPage() {
             </form>
             {message && <p className="admin-message success">{message}</p>}
             {error && <p className="admin-message error">{error}</p>}
-            <p className="admin-help">Konfigurasi akun: email Supabase Auth <strong>{ADMIN_EMAIL}</strong> dengan metadata username <strong>{ADMIN_USERNAME}</strong>.</p>
+            <p className="admin-help">Konfigurasi akun: buat user Supabase Auth <strong>{ADMIN_EMAIL}</strong>, lalu tambahkan baris <strong>admin_profiles</strong> dengan username <strong>{ADMIN_USERNAME}</strong> dan role <strong>admin</strong>. Jangan simpan password admin di source code, .env, localStorage, atau database custom.</p>
           </section>
         </main>
       </>
@@ -601,7 +601,7 @@ function AdminPage() {
           <section className="admin-panel auth-panel">
             <p className="section-label">Admin</p>
             <h1>Akses ditolak</h1>
-            <p>SQL editor dan dashboard admin hanya tersedia untuk akun Supabase Auth yang diberi peran admin.</p>
+            <p>SQL editor dan dashboard admin hanya tersedia untuk akun Supabase Auth yang terdaftar di admin_profiles dengan role admin.</p>
             {error && <p className="admin-message error">{error}</p>}
             <button className="button button-secondary" type="button" onClick={handleLogout}>
               Logout
