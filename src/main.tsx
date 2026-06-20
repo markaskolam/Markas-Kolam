@@ -6,6 +6,13 @@ import './styles.css';
 
 type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
+type QueryHistoryItem = {
+  query: string;
+  createdAt: string;
+};
+
+type QueryRow = Record<string, unknown>;
+
 type SiteContent = {
   headline: string;
   description: string;
@@ -278,6 +285,82 @@ function CatalogPage() {
   );
 }
 
+async function fetchAdminProducts() {
+  if (!isSupabaseConfigured) throw new Error('Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY.');
+
+  const { data, error } = (await supabase.rpc('admin_list_products')) as { data: ProductRow[] | null; error: Error | null };
+  if (error) throw error;
+  return ((data ?? []) as ProductRow[]).map(mapProductRow);
+}
+
+function SqlEditor() {
+  const [query, setQuery] = useState('select id, name, category, featured, created_at from products order by created_at desc');
+  const [rows, setRows] = useState<QueryRow[]>([]);
+  const [history, setHistory] = useState<QueryHistoryItem[]>([]);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState('');
+
+  const columns = useMemo(() => Array.from(new Set(rows.flatMap((row) => Object.keys(row)))), [rows]);
+
+  const handleRun = async () => {
+    setRunning(true);
+    setError('');
+    setRows([]);
+    const { data, error: invokeError } = await supabase.functions.invoke('admin-sql-editor', { body: { query } });
+    setRunning(false);
+
+    if (invokeError || data?.error) {
+      setError(invokeError?.message ?? data.error);
+      return;
+    }
+
+    const resultRows = Array.isArray(data?.rows) ? (data.rows as QueryRow[]) : [];
+    setRows(resultRows);
+    setHistory((items) => [{ query, createdAt: new Date().toISOString() }, ...items].slice(0, 8));
+  };
+
+  return (
+    <section className="admin-panel sql-editor">
+      <div>
+        <p className="section-label">SQL Editor</p>
+        <h2>Query read-only admin</h2>
+        <p>Query dikirim ke Supabase Edge Function, service role key tetap di server, dan hanya SELECT tunggal yang dijalankan.</p>
+      </div>
+      <textarea value={query} onChange={(event) => setQuery(event.target.value)} spellCheck={false} />
+      <button className="button button-primary" type="button" onClick={handleRun} disabled={running || !query.trim()}>
+        {running ? 'Menjalankan...' : 'Run query'}
+      </button>
+      {error && <pre className="sql-error">{error}</pre>}
+      {rows.length > 0 && (
+        <div className="sql-result-wrap">
+          <table className="sql-result">
+            <thead>
+              <tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {columns.map((column) => <td key={column}>{String(row[column] ?? '')}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="query-history">
+        <h3>Riwayat query</h3>
+        {history.length === 0 && <p>Belum ada query pada sesi ini.</p>}
+        {history.map((item) => (
+          <button key={`${item.createdAt}-${item.query}`} type="button" onClick={() => setQuery(item.query)}>
+            <code>{item.query}</code>
+            <span>{new Date(item.createdAt).toLocaleString('id-ID')}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [email, setEmail] = useState('');
@@ -286,6 +369,8 @@ function AdminPage() {
   const [siteContent, setSiteContent] = useState(defaultSiteContent);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -295,7 +380,7 @@ function AdminPage() {
     setLoading(true);
     setError('');
     try {
-      const [productData, contentData] = await Promise.all([fetchProducts(), fetchSiteContent()]);
+      const [productData, contentData] = await Promise.all([fetchAdminProducts(), fetchSiteContent()]);
       setProducts(productData);
       setSiteContent(contentData);
     } catch (loadError) {
@@ -321,8 +406,28 @@ function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (session) void loadAdminData();
-    else setLoading(false);
+    const verifyAdmin = async () => {
+      if (!session) {
+        setIsAdmin(false);
+        setAdminChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setAdminChecked(false);
+      const { data, error: adminError } = await supabase.rpc('is_admin');
+      const allowed = !adminError && data === true;
+      setIsAdmin(allowed);
+      setAdminChecked(true);
+      if (allowed) void loadAdminData();
+      else {
+        setError('Akses /admin hanya untuk user dengan app_metadata role admin.');
+        setLoading(false);
+      }
+    };
+
+    void verifyAdmin();
   }, [session]);
 
   const handleLogin = async (event: React.FormEvent) => {
@@ -413,6 +518,25 @@ function AdminPage() {
             </form>
             {message && <p className="admin-message success">{message}</p>}
             {error && <p className="admin-message error">{error}</p>}
+          </section>
+        </main>
+      </>
+    );
+  }
+
+  if (adminChecked && !isAdmin) {
+    return (
+      <>
+        <Navbar />
+        <main className="admin-page">
+          <section className="admin-panel auth-panel">
+            <p className="section-label">Admin</p>
+            <h1>Akses ditolak</h1>
+            <p>SQL editor dan dashboard admin hanya tersedia untuk akun Supabase Auth yang diberi peran admin.</p>
+            {error && <p className="admin-message error">{error}</p>}
+            <button className="button button-secondary" type="button" onClick={() => supabase.auth.signOut()}>
+              Logout
+            </button>
           </section>
         </main>
       </>
@@ -546,6 +670,8 @@ function AdminPage() {
             </form>
           </section>
         </div>
+
+        <SqlEditor />
 
         <section className="admin-panel product-manager">
           <h2>Produk E-Katalog</h2>

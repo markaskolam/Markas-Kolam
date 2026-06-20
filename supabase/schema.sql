@@ -38,3 +38,95 @@ create policy "Authenticated users can manage site settings"
   on public.site_settings for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
+
+create table if not exists public.admin_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  action text not null,
+  query text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admin_audit_logs enable row level security;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin'
+    or coalesce((auth.jwt() -> 'app_metadata' ->> 'admin')::boolean, false);
+$$;
+
+drop policy if exists "Admins can read audit logs" on public.admin_audit_logs;
+create policy "Admins can read audit logs"
+  on public.admin_audit_logs for select
+  using (public.is_admin());
+
+drop policy if exists "Admins can insert audit logs" on public.admin_audit_logs;
+create policy "Admins can insert audit logs"
+  on public.admin_audit_logs for insert
+  with check (public.is_admin());
+
+drop policy if exists "Authenticated users can manage products" on public.products;
+drop policy if exists "Admins can manage products" on public.products;
+create policy "Admins can manage products"
+  on public.products for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Authenticated users can manage site settings" on public.site_settings;
+drop policy if exists "Admins can manage site settings" on public.site_settings;
+create policy "Admins can manage site settings"
+  on public.site_settings for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create or replace function public.admin_list_products()
+returns setof public.products
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select *
+  from public.products
+  where public.is_admin()
+  order by featured desc, created_at desc;
+$$;
+
+create or replace function public.admin_execute_readonly_sql(sql_query text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if sql_query is null or btrim(sql_query) = '' then
+    raise exception 'Query wajib diisi.';
+  end if;
+
+  if not (lower(btrim(sql_query)) like 'select%') then
+    raise exception 'Hanya SELECT read-only yang diizinkan.';
+  end if;
+
+  if sql_query ~* '\m(drop|truncate|alter|grant|revoke|create\s+extension|copy|execute|call)\M' then
+    raise exception 'Statement berbahaya tidak diizinkan.';
+  end if;
+
+  if regexp_replace(sql_query, ';\s*$', '') like '%;%' then
+    raise exception 'Multi-statement SQL tidak diizinkan.';
+  end if;
+
+  execute format('select coalesce(jsonb_agg(row_to_json(t)), ''[]''::jsonb) from (%s) as t', sql_query) into result;
+  return result;
+end;
+$$;
+
+revoke all on function public.admin_execute_readonly_sql(text) from public, anon, authenticated;
+
+grant execute on function public.admin_execute_readonly_sql(text) to service_role;
