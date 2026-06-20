@@ -15,10 +15,14 @@ type QueryHistoryItem = {
 };
 
 type QueryRow = Record<string, unknown>;
+type AdminSection = 'dashboard' | 'catalog' | 'settings' | 'sql';
 
 type SiteContent = {
   headline: string;
+  subheadline: string;
   description: string;
+  businessDescription: string;
+  whatsappNumber: string;
   ctaLabel: string;
   ctaWhatsAppMessage: string;
   whatsappContactMessage: string;
@@ -30,6 +34,7 @@ type ProductFormState = {
   category: string;
   description: string;
   price: string;
+  imageUrl: string;
   useCases: string;
   whatsappMessage: string;
   featured: boolean;
@@ -37,7 +42,10 @@ type ProductFormState = {
 
 const defaultSiteContent: SiteContent = {
   headline: 'Ikan fresh buat makan, ternak, atau koleksi.',
+  subheadline: 'Ready stock ikan sehat, proses cepat, dan siap dikirim sesuai kebutuhan.',
   description: 'Markas Kolam jual ikan sehat untuk dapur, kolam budidaya, dan koleksi.',
+  businessDescription: 'Kami membantu pelanggan memilih ikan konsumsi, bibit budidaya, dan ikan koleksi dengan stok yang dikurasi langsung dari kolam.',
+  whatsappNumber: '6281234567890',
   ctaLabel: 'Buka E-Katalog',
   ctaWhatsAppMessage: 'Halo Markas Kolam, saya mau tanya stok ikan hari ini.',
   whatsappContactMessage: 'Halo Markas Kolam, saya mau tanya stok Gurame Padang hari ini.',
@@ -49,6 +57,7 @@ const defaultProduct: Product = {
   category: 'Ikan',
   description: 'Produk akan tampil setelah data Supabase ditambahkan.',
   price: 'Hubungi admin',
+  imageUrl: '',
   whatsappMessage: defaultSiteContent.whatsappContactMessage,
   useCases: ['Konsumsi', 'Budidaya', 'Koleksi'],
   featured: true,
@@ -59,6 +68,7 @@ const emptyForm: ProductFormState = {
   category: '',
   description: '',
   price: '',
+  imageUrl: '',
   useCases: '',
   whatsappMessage: '',
   featured: false,
@@ -78,6 +88,7 @@ const toProductPayload = (form: ProductFormState) => ({
   category: form.category.trim(),
   description: form.description.trim() || null,
   price: form.price.trim() || null,
+  image_url: form.imageUrl.trim() || null,
   use_cases: form.useCases
     .split(',')
     .map((useCase) => useCase.trim())
@@ -92,6 +103,7 @@ const toProductForm = (product: Product): ProductFormState => ({
   category: product.category,
   description: product.description,
   price: product.price,
+  imageUrl: product.imageUrl,
   useCases: product.useCases.join(', '),
   whatsappMessage: product.whatsappMessage,
   featured: product.featured,
@@ -143,6 +155,7 @@ function Navbar() {
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   return (
     <article className="product-card">
+      {product.imageUrl && <img className="product-image" src={product.imageUrl} alt={product.name} />}
       <span>{product.category}</span>
       <h3>{product.name}</h3>
       <p>{product.description}</p>
@@ -202,13 +215,14 @@ function HomePage() {
           <div className="hero-content">
             <p className="eyebrow">Fresh fish drop</p>
             <h1>{siteContent.headline}</h1>
+            <p className="hero-subheadline">{siteContent.subheadline}</p>
             <div className="hero-actions">
               <a className="button button-primary" href={paths.catalog}>
                 {siteContent.ctaLabel}
               </a>
               <a
                 className="button button-secondary"
-                href={createWhatsAppLink(siteContent.ctaWhatsAppMessage)}
+                href={createWhatsAppLink(siteContent.ctaWhatsAppMessage, siteContent.whatsappNumber)}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -231,6 +245,7 @@ function HomePage() {
 
         <section className="section intro" aria-label="Tentang Markas Kolam">
           <p>{siteContent.description}</p>
+          <p className="intro-detail">{siteContent.businessDescription}</p>
         </section>
 
         <section className="section perks" id="perks" aria-labelledby="perks-title">
@@ -250,7 +265,7 @@ function HomePage() {
           <h2>Mau stok hari ini?</h2>
           <a
             className="button button-light"
-            href={createWhatsAppLink(siteContent.whatsappContactMessage)}
+            href={createWhatsAppLink(siteContent.whatsappContactMessage, siteContent.whatsappNumber)}
             target="_blank"
             rel="noreferrer"
           >
@@ -379,6 +394,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -405,8 +421,8 @@ function AdminPage() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, authSession) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: string, authSession: Session | null) => {
       setSession(authSession);
     });
 
@@ -498,7 +514,7 @@ function AdminPage() {
     setMessage('');
     const payload = toProductPayload(form);
     const request = isEditing
-      ? supabase.from('products').update(payload).eq('id', form.id)
+      ? supabase.from('products').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', form.id)
       : supabase.from('products').insert(payload);
     const { error: saveError } = await request;
     if (saveError) setError(saveError.message);
@@ -519,6 +535,22 @@ function AdminPage() {
     if (deleteError) setError(deleteError.message);
     else {
       setMessage('Produk berhasil dihapus.');
+      await loadAdminData();
+    }
+    setLoading(false);
+  };
+
+  const handleToggleFeatured = async (product: Product) => {
+    setLoading(true);
+    setError('');
+    setMessage('');
+    const { error: featuredError } = await supabase
+      .from('products')
+      .update({ featured: !product.featured, updated_at: new Date().toISOString() })
+      .eq('id', product.id);
+    if (featuredError) setError(featuredError.message);
+    else {
+      setMessage(product.featured ? 'Produk tidak lagi unggulan.' : 'Produk berhasil ditandai unggulan.');
       await loadAdminData();
     }
     setLoading(false);
@@ -581,157 +613,183 @@ function AdminPage() {
   }
 
   return (
+    <AdminDashboard
+      activeSection={activeSection}
+      error={error}
+      form={form}
+      isEditing={isEditing}
+      loading={loading}
+      message={message}
+      products={products}
+      setActiveSection={setActiveSection}
+      setForm={setForm}
+      setSiteContent={setSiteContent}
+      siteContent={siteContent}
+      onDeleteProduct={handleDeleteProduct}
+      onLogout={handleLogout}
+      onSaveProduct={handleSaveProduct}
+      onSaveSettings={handleSaveSettings}
+      onToggleFeatured={handleToggleFeatured}
+    />
+  );
+}
+
+type AdminDashboardProps = {
+  activeSection: AdminSection;
+  error: string;
+  form: ProductFormState;
+  isEditing: boolean;
+  loading: boolean;
+  message: string;
+  products: Product[];
+  setActiveSection: React.Dispatch<React.SetStateAction<AdminSection>>;
+  setForm: React.Dispatch<React.SetStateAction<ProductFormState>>;
+  setSiteContent: React.Dispatch<React.SetStateAction<SiteContent>>;
+  siteContent: SiteContent;
+  onDeleteProduct: (product: Product) => void;
+  onLogout: () => void;
+  onSaveProduct: (event: React.FormEvent) => void;
+  onSaveSettings: (event: React.FormEvent) => void;
+  onToggleFeatured: (product: Product) => void;
+};
+
+function AdminDashboard({
+  activeSection,
+  error,
+  form,
+  isEditing,
+  loading,
+  message,
+  products,
+  setActiveSection,
+  setForm,
+  setSiteContent,
+  siteContent,
+  onDeleteProduct,
+  onLogout,
+  onSaveProduct,
+  onSaveSettings,
+  onToggleFeatured,
+}: AdminDashboardProps) {
+  const menuItems: { id: AdminSection; label: string }[] = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'catalog', label: 'E-Katalog' },
+    { id: 'settings', label: 'Pengaturan Website' },
+    { id: 'sql', label: 'SQL Editor' },
+  ];
+
+  const featuredCount = products.filter((product) => product.featured).length;
+
+  return (
     <>
       <Navbar />
-      <main className="admin-page">
-        <section className="admin-header">
-          <div>
-            <p className="section-label">Dashboard</p>
-            <h1>Admin Markas Kolam</h1>
-            <p>Edit konten landing page dan kelola produk e-katalog dari Supabase.</p>
-          </div>
-          <button className="button button-secondary" type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </section>
-
-        {loading && <p className="admin-message">Memproses...</p>}
-        {message && <p className="admin-message success">{message}</p>}
-        {error && <p className="admin-message error">{error}</p>}
-
-        <div className="admin-grid">
-          <section className="admin-panel">
-            <h2>Edit Landing Page</h2>
-            <form className="admin-form" onSubmit={handleSaveSettings}>
-              <label>
-                Headline
-                <textarea
-                  value={siteContent.headline}
-                  onChange={(event) => setSiteContent({ ...siteContent, headline: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Deskripsi
-                <textarea
-                  value={siteContent.description}
-                  onChange={(event) => setSiteContent({ ...siteContent, description: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Label CTA
-                <input
-                  value={siteContent.ctaLabel}
-                  onChange={(event) => setSiteContent({ ...siteContent, ctaLabel: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Pesan CTA WhatsApp
-                <textarea
-                  value={siteContent.ctaWhatsAppMessage}
-                  onChange={(event) => setSiteContent({ ...siteContent, ctaWhatsAppMessage: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Kontak WhatsApp
-                <textarea
-                  value={siteContent.whatsappContactMessage}
-                  onChange={(event) => setSiteContent({ ...siteContent, whatsappContactMessage: event.target.value })}
-                  required
-                />
-              </label>
-              <button className="button button-primary" type="submit" disabled={loading}>
-                Simpan Konten
+      <main className="admin-page admin-shell">
+        <aside className="admin-sidebar" aria-label="Menu admin">
+          <a className="brand" href={paths.adminDashboard}>Markas Kolam Admin</a>
+          <nav className="admin-menu">
+            {menuItems.map((item) => (
+              <button
+                className={activeSection === item.id ? 'active' : ''}
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+              >
+                {item.label}
               </button>
-            </form>
-          </section>
-
-          <section className="admin-panel">
-            <h2>{isEditing ? 'Ubah Produk' : 'Tambah Produk'}</h2>
-            <form className="admin-form" onSubmit={handleSaveProduct}>
-              <label>
-                Nama Produk
-                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-              </label>
-              <label>
-                Kategori
-                <input
-                  value={form.category}
-                  onChange={(event) => setForm({ ...form, category: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Deskripsi
-                <textarea
-                  value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
-                />
-              </label>
-              <label>
-                Harga
-                <input value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
-              </label>
-              <label>
-                Use cases (pisahkan dengan koma)
-                <input value={form.useCases} onChange={(event) => setForm({ ...form, useCases: event.target.value })} />
-              </label>
-              <label>
-                Pesan WhatsApp Produk
-                <textarea
-                  value={form.whatsappMessage}
-                  onChange={(event) => setForm({ ...form, whatsappMessage: event.target.value })}
-                />
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={form.featured}
-                  onChange={(event) => setForm({ ...form, featured: event.target.checked })}
-                />
-                Jadikan featured
-              </label>
-              <div className="admin-actions">
-                <button className="button button-primary" type="submit" disabled={loading}>
-                  {isEditing ? 'Simpan Perubahan' : 'Tambah Produk'}
-                </button>
-                {isEditing && (
-                  <button className="button button-secondary" type="button" onClick={() => setForm(emptyForm)}>
-                    Batal Edit
-                  </button>
-                )}
-              </div>
-            </form>
-          </section>
-        </div>
-
-        <SqlEditor />
-
-        <section className="admin-panel product-manager">
-          <h2>Produk E-Katalog</h2>
-          <div className="admin-product-list">
-            {products.map((product) => (
-              <article className="admin-product-item" key={product.id}>
-                <div>
-                  <span>{product.category}</span>
-                  <strong>{product.name}</strong>
-                  <p>{product.description}</p>
-                </div>
-                <div className="admin-actions">
-                  <button className="button button-secondary" type="button" onClick={() => setForm(toProductForm(product))}>
-                    Ubah
-                  </button>
-                  <button className="button danger-button" type="button" onClick={() => handleDeleteProduct(product)}>
-                    Hapus
-                  </button>
-                </div>
-              </article>
             ))}
-          </div>
-        </section>
+            <button type="button" onClick={onLogout}>Logout</button>
+          </nav>
+        </aside>
+
+        <div className="admin-content">
+          <section className="admin-header">
+            <div>
+              <p className="section-label">Dashboard</p>
+              <h1>Admin Markas Kolam</h1>
+              <p>Edit konten landing page dan kelola produk e-katalog dari Supabase.</p>
+            </div>
+            <button className="button button-secondary" type="button" onClick={onLogout}>Logout</button>
+          </section>
+
+          {loading && <p className="admin-message">Memproses...</p>}
+          {message && <p className="admin-message success">{message}</p>}
+          {error && <p className="admin-message error">{error}</p>}
+
+          {activeSection === 'dashboard' && (
+            <section className="admin-panel dashboard-overview">
+              <p className="section-label">Ringkasan</p>
+              <h2>Dashboard</h2>
+              <div className="admin-stats">
+                <article><strong>{products.length}</strong><span>Total produk</span></article>
+                <article><strong>{featuredCount}</strong><span>Produk unggulan</span></article>
+                <article><strong>{siteContent.whatsappNumber}</strong><span>Nomor WhatsApp</span></article>
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'settings' && (
+            <section className="admin-panel">
+              <h2>Pengaturan Website</h2>
+              <form className="admin-form" onSubmit={onSaveSettings}>
+                <label>Headline<textarea value={siteContent.headline} onChange={(event) => setSiteContent({ ...siteContent, headline: event.target.value })} required /></label>
+                <label>Subheadline<textarea value={siteContent.subheadline} onChange={(event) => setSiteContent({ ...siteContent, subheadline: event.target.value })} required /></label>
+                <label>Deskripsi Landing Page<textarea value={siteContent.description} onChange={(event) => setSiteContent({ ...siteContent, description: event.target.value })} required /></label>
+                <label>Deskripsi Bisnis<textarea value={siteContent.businessDescription} onChange={(event) => setSiteContent({ ...siteContent, businessDescription: event.target.value })} required /></label>
+                <label>Nomor WhatsApp<input value={siteContent.whatsappNumber} onChange={(event) => setSiteContent({ ...siteContent, whatsappNumber: event.target.value })} required /></label>
+                <label>Label CTA<input value={siteContent.ctaLabel} onChange={(event) => setSiteContent({ ...siteContent, ctaLabel: event.target.value })} required /></label>
+                <label>Pesan CTA WhatsApp<textarea value={siteContent.ctaWhatsAppMessage} onChange={(event) => setSiteContent({ ...siteContent, ctaWhatsAppMessage: event.target.value })} required /></label>
+                <label>Pesan Kontak WhatsApp<textarea value={siteContent.whatsappContactMessage} onChange={(event) => setSiteContent({ ...siteContent, whatsappContactMessage: event.target.value })} required /></label>
+                <button className="button button-primary" type="submit" disabled={loading}>Simpan Pengaturan</button>
+              </form>
+            </section>
+          )}
+
+          {activeSection === 'catalog' && (
+            <>
+              <section className="admin-panel">
+                <h2>{isEditing ? 'Edit Produk' : 'Tambah Produk'}</h2>
+                <form className="admin-form" onSubmit={onSaveProduct}>
+                  <label>Nama Produk<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+                  <label>Kategori<input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} required /></label>
+                  <label>Deskripsi<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+                  <label>Harga<input value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} /></label>
+                  <label>Image URL<input value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} /></label>
+                  <label>Use cases (pisahkan dengan koma)<input value={form.useCases} onChange={(event) => setForm({ ...form, useCases: event.target.value })} /></label>
+                  <label>Pesan WhatsApp Produk<textarea value={form.whatsappMessage} onChange={(event) => setForm({ ...form, whatsappMessage: event.target.value })} /></label>
+                  <label className="checkbox-label"><input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} /> Tandai produk unggulan</label>
+                  <div className="admin-actions">
+                    <button className="button button-primary" type="submit" disabled={loading}>{isEditing ? 'Simpan Perubahan' : 'Tambah Produk'}</button>
+                    {isEditing && <button className="button button-secondary" type="button" onClick={() => setForm(emptyForm)}>Batal Edit</button>}
+                  </div>
+                </form>
+              </section>
+
+              <section className="admin-panel product-manager">
+                <h2>Produk E-Katalog</h2>
+                <div className="admin-product-list">
+                  {products.map((product) => (
+                    <article className="admin-product-item" key={product.id}>
+                      {product.imageUrl && <img src={product.imageUrl} alt="" />}
+                      <div>
+                        <span>{product.category}{product.featured ? ' • Unggulan' : ''}</span>
+                        <strong>{product.name}</strong>
+                        <p>{product.description}</p>
+                      </div>
+                      <div className="admin-actions">
+                        <button className="button button-secondary" type="button" onClick={() => setForm(toProductForm(product))}>Edit</button>
+                        <button className="button button-secondary" type="button" onClick={() => onToggleFeatured(product)}>{product.featured ? 'Batalkan Unggulan' : 'Tandai Unggulan'}</button>
+                        <button className="button danger-button" type="button" onClick={() => onDeleteProduct(product)}>Hapus</button>
+                      </div>
+                    </article>
+                  ))}
+                  {products.length === 0 && <p>Belum ada produk.</p>}
+                </div>
+              </section>
+            </>
+          )}
+
+          {activeSection === 'sql' && <SqlEditor />}
+        </div>
       </main>
     </>
   );
