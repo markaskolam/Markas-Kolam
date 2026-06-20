@@ -58,7 +58,7 @@ create table if not exists public.admin_audit_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   action text not null,
-  query text,
+  sql text,
   created_at timestamptz not null default now()
 );
 
@@ -138,7 +138,7 @@ begin
     raise exception 'Hanya SELECT read-only yang diizinkan.';
   end if;
 
-  if sql_query ~* '\m(drop|truncate|alter|grant|revoke|create\s+extension|copy|execute|call)\M' then
+  if sql_query ~* '\m(drop|truncate|alter|delete|update|insert|upsert|merge|grant|revoke|create|replace|copy|execute|call|comment|vacuum|analyze)\M' then
     raise exception 'Statement berbahaya tidak diizinkan.';
   end if;
 
