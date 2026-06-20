@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const forbiddenPattern = /\b(drop|truncate|alter|grant|revoke|create\s+extension|copy|execute|call)\b/i;
+const forbiddenPattern = /\b(drop|truncate|alter|delete|update|insert|upsert|merge|grant|revoke|create|replace|copy|execute|call|comment|vacuum|analyze)\b/i;
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -43,9 +43,17 @@ Deno.serve(async (req) => {
 
   const { data: userData, error: userError } = await userClient.auth.getUser();
   const user = userData.user;
-  const isAdmin = user?.app_metadata?.role === 'admin' || user?.app_metadata?.admin === true;
 
-  if (userError || !user || !isAdmin) return jsonResponse({ error: 'Akses hanya untuk admin terautentikasi.' }, 403);
+  if (userError || !user) return jsonResponse({ error: 'Akses hanya untuk admin terautentikasi.' }, 403);
+
+  const { data: adminProfile, error: adminProfileError } = await adminClient
+    .from('admin_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  if (adminProfileError || !adminProfile) return jsonResponse({ error: 'Akses hanya untuk admin terautentikasi.' }, 403);
 
   let query = '';
   try {
@@ -54,7 +62,7 @@ Deno.serve(async (req) => {
     const safeQuery = assertSafeSql(query);
 
     const { data, error } = await adminClient.rpc('admin_execute_readonly_sql', { sql_query: safeQuery });
-    await adminClient.from('admin_audit_logs').insert({ user_id: user.id, action: 'sql_editor.run', query });
+    await adminClient.from('admin_audit_logs').insert({ user_id: user.id, action: error ? 'sql_editor.error' : 'sql_editor.run', sql: query });
 
     if (error) return jsonResponse({ error: error.message }, 400);
     return jsonResponse({ rows: data ?? [] });
@@ -63,7 +71,7 @@ Deno.serve(async (req) => {
       await adminClient.from('admin_audit_logs').insert({
         user_id: user.id,
         action: 'sql_editor.rejected',
-        query,
+        sql: query,
       });
     }
     return jsonResponse({ error: (error as Error).message }, 400);
