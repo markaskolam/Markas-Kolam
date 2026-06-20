@@ -6,6 +6,9 @@ import './styles.css';
 
 type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
+const ADMIN_USERNAME = 'admin';
+const ADMIN_EMAIL = 'admin@markaskolam.local';
+
 type QueryHistoryItem = {
   query: string;
   createdAt: string;
@@ -67,6 +70,7 @@ const paths = {
   home: '/',
   catalog: '/ekatalog/index.html',
   admin: '/admin',
+  adminDashboard: '/admin/dashboard',
 };
 
 const toProductPayload = (form: ProductFormState) => ({
@@ -361,9 +365,13 @@ function SqlEditor() {
   );
 }
 
+function AdminLoginPage() {
+  return <AdminPage />;
+}
+
 function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [siteContent, setSiteContent] = useState(defaultSiteContent);
@@ -406,8 +414,19 @@ function AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (session && window.location.pathname === paths.admin) {
+      window.history.replaceState(null, '', paths.adminDashboard);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  }, [session]);
+
+  useEffect(() => {
     const verifyAdmin = async () => {
       if (!session) {
+        if (window.location.pathname === paths.adminDashboard) {
+          window.history.replaceState(null, '', paths.admin);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
         setIsAdmin(false);
         setAdminChecked(true);
         setLoading(false);
@@ -435,10 +454,26 @@ function AdminPage() {
     setLoading(true);
     setError('');
     setMessage('');
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (username.trim().toLowerCase() !== ADMIN_USERNAME) {
+      setLoading(false);
+      setError('Username tidak dikenali. Gunakan username admin yang terdaftar.');
+      return;
+    }
+
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
     setLoading(false);
-    if (authError) setError(authError.message);
-    else setMessage('Login berhasil.');
+    if (authError) setError('Login gagal. Periksa username dan password admin.');
+    else {
+      setMessage('Login berhasil.');
+      window.history.pushState(null, '', paths.adminDashboard);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.history.pushState(null, '', paths.admin);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const handleSaveSettings = async (event: React.FormEvent) => {
@@ -497,15 +532,16 @@ function AdminPage() {
           <section className="admin-panel auth-panel">
             <p className="section-label">Admin</p>
             <h1>Login Admin</h1>
-            <p>Masuk dengan akun Supabase Auth sebelum mengubah produk atau konten landing page.</p>
+            <p>Masuk dengan username admin. Username admin dipetakan ke email Supabase Auth.</p>
             <form className="admin-form" onSubmit={handleLogin}>
               <label>
-                Email
-                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                Username
+                <input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="admin" required />
               </label>
               <label>
                 Password
                 <input
+                  autoComplete="current-password"
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -518,6 +554,7 @@ function AdminPage() {
             </form>
             {message && <p className="admin-message success">{message}</p>}
             {error && <p className="admin-message error">{error}</p>}
+            <p className="admin-help">Konfigurasi akun: email Supabase Auth <strong>{ADMIN_EMAIL}</strong> dengan metadata username <strong>{ADMIN_USERNAME}</strong>.</p>
           </section>
         </main>
       </>
@@ -534,7 +571,7 @@ function AdminPage() {
             <h1>Akses ditolak</h1>
             <p>SQL editor dan dashboard admin hanya tersedia untuk akun Supabase Auth yang diberi peran admin.</p>
             {error && <p className="admin-message error">{error}</p>}
-            <button className="button button-secondary" type="button" onClick={() => supabase.auth.signOut()}>
+            <button className="button button-secondary" type="button" onClick={handleLogout}>
               Logout
             </button>
           </section>
@@ -553,7 +590,7 @@ function AdminPage() {
             <h1>Admin Markas Kolam</h1>
             <p>Edit konten landing page dan kelola produk e-katalog dari Supabase.</p>
           </div>
-          <button className="button button-secondary" type="button" onClick={() => supabase.auth.signOut()}>
+          <button className="button button-secondary" type="button" onClick={handleLogout}>
             Logout
           </button>
         </section>
@@ -701,9 +738,16 @@ function AdminPage() {
 }
 
 function App() {
-  const pathname = window.location.pathname;
+  const [pathname, setPathname] = useState(window.location.pathname);
 
-  if (pathname === paths.admin) return <AdminPage />;
+  useEffect(() => {
+    const handleRouteChange = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
+  }, []);
+
+  if (pathname === paths.admin) return <AdminLoginPage />;
+  if (pathname === paths.adminDashboard) return <AdminPage />;
   if (pathname.startsWith(paths.catalog)) return <CatalogPage />;
   return <HomePage />;
 }

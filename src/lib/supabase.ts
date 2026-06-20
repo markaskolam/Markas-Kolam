@@ -5,4 +5,10 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
