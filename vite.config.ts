@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         ekatalog: resolve(__dirname, 'ekatalog/index.html'),
+        admin: resolve(__dirname, 'admin/index.html'),
       },
     },
   },
